@@ -21,7 +21,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
+        "label.go",
         "main.go",
+        "match.go",
+        "note_handler.go",
         "robot.go",
     ],
     importpath = "github.com/opensourceways/robot-gitee-label",
