@@ -20,7 +20,7 @@ update_repo(){
     if [ -f go.mod ]; then
         go mod tidy
     else
-        go mod init
+        go mod init github.com/opensourceways/robot-gitee-label
         go mod tidy
     fi
 
