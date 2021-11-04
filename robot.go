@@ -26,7 +26,6 @@ type iClient interface {
 
 	CreatePRComment(org, repo string, number int32, comment string) error
 	CreateIssueComment(org, repo string, number string, comment string) error
-	ListPROperationLogs(org, repo string, number int32) ([]sdk.OperateLog, error)
 
 	IsCollaborator(owner, repo, login string) (bool, error)
 }
@@ -43,11 +42,15 @@ func (bot *robot) NewPluginConfig() libconfig.PluginConfig {
 	return &configuration{}
 }
 
-func (bot *robot) getConfig(cfg libconfig.PluginConfig) (*configuration, error) {
-	if c, ok := cfg.(*configuration); ok {
-		return c, nil
+func (bot *robot) getConfig(cfg libconfig.PluginConfig, org, repo string) (*botConfig, error) {
+	c, ok := cfg.(*configuration)
+	if !ok {
+		return nil, fmt.Errorf("can't convert to configuration")
 	}
-	return nil, fmt.Errorf("can't convert to configuration")
+	if bc := c.configFor(org, repo); bc != nil {
+		return bc, nil
+	}
+	return nil, fmt.Errorf("no %s robot config for this repo:%s/%s", botName, org, repo)
 }
 
 func (bot *robot) RegisterEventHandler(p libplugin.HandlerRegitster) {
@@ -58,17 +61,16 @@ func (bot *robot) RegisterEventHandler(p libplugin.HandlerRegitster) {
 func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, cfg libconfig.PluginConfig, log *logrus.Entry) error {
 	prInfo := giteeclient.GetPRInfoByPREvent(e)
 
-	cfgForRepo := bot.getConfigItem(prInfo.Org, prInfo.Repo, cfg, log)
-	if cfgForRepo == nil {
-		return nil
+	cfgForRepo, err := bot.getConfig(cfg,prInfo.Org,prInfo.Repo)
+	if err != nil {
+		return err
 	}
+
 	prHandle := &prNoteHandle{client: bot.cli, org: prInfo.Org, repo: prInfo.Repo, number: prInfo.Number}
 
-	switch giteeclient.GetPullRequestAction(e) {
-	case giteeclient.PRActionChangedSourceBranch:
+	action := giteeclient.GetPullRequestAction(e)
+	if action == giteeclient.PRActionChangedSourceBranch {
 		return bot.handleClearLabel(prHandle, cfgForRepo)
-	case "edited":
-		return bot.handleValidatingLabel(prHandle, prInfo, cfgForRepo, log)
 	}
 
 	return nil
@@ -88,21 +90,6 @@ func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, cfg libconfig.PluginConfig, 
 	}
 
 	return bot.handleLabels(ne, matchLabels, cfg, log)
-}
-
-func (bot *robot) getConfigItem(org, repo string, cfg libconfig.PluginConfig, log *logrus.Entry) *botConfig {
-	config, err := bot.getConfig(cfg)
-	if err != nil {
-		return nil
-	}
-
-	cfgItem := config.configFor(org, repo)
-	if cfgItem == nil {
-		log.Info(fmt.Sprintf("no %s robot config for this repo:%s/%s", botName, org, repo))
-		return nil
-	}
-
-	return cfgItem
 }
 
 func (bot *robot) getRepoLabelsMap(org, repo string) (map[string]string, error) {
