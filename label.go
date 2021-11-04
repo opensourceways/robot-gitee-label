@@ -99,7 +99,7 @@ func (bot *robot) handleValidatingLabel(handle *prNoteHandle, info giteeclient.P
 }
 
 func handleAddLabels(nh noteHandler, repoLabels map[string]string, labelsToAdd []string, isCollaborator bool) error {
-	subjectLabels, err := nh.getLabels()
+	noteLabels, err := nh.getLabels()
 	if err != nil {
 		return err
 	}
@@ -108,13 +108,13 @@ func handleAddLabels(nh noteHandler, repoLabels map[string]string, labelsToAdd [
 	var canAddLabels []string
 
 	for _, labelToAdd := range labelsToAdd {
-		if _, ok := subjectLabels[labelToAdd]; ok {
+		if _, ok := noteLabels[labelToAdd]; ok {
 			continue
 		}
-		if label, ok := repoLabels[labelToAdd]; !ok && !isCollaborator {
+		if _, ok := repoLabels[labelToAdd]; !ok && !isCollaborator {
 			canNotAddLabels = append(canNotAddLabels, labelToAdd)
 		} else {
-			canAddLabels = append(canAddLabels, label)
+			canAddLabels = append(canAddLabels, labelToAdd)
 		}
 	}
 
