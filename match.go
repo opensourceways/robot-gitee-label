@@ -25,12 +25,14 @@ func (m match) getRemoveLabels() []string {
 
 func getLabelsFromMatch(lm [][]string) []string {
 	var labels []string
+
 	for _, v := range lm {
 		for _, label := range strings.Split(v[0], " ")[1:] {
 			label = strings.ToLower(v[1] + "/" + strings.TrimSpace(label))
 			labels = append(labels, label)
 		}
 	}
+
 	return labels
 }
 

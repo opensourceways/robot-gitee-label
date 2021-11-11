@@ -9,8 +9,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (bot *robot) handleLabels(e giteeclient.NoteEventWrapper, mLabels *match, pc libconfig.PluginConfig, log *logrus.Entry) error {
+func (bot *robot) handleLabels(
+	e giteeclient.NoteEventWrapper,
+	mLabels *match,
+	pc libconfig.PluginConfig,
+	log *logrus.Entry,
+) error {
 	org, repo := e.GetOrgRep()
+
 	_, err := bot.getConfig(pc, org, repo)
 	if err != nil {
 		return err
@@ -35,7 +41,7 @@ func (bot *robot) handleLabels(e giteeclient.NoteEventWrapper, mLabels *match, p
 	}
 
 	addLabels := mLabels.getAddLabels()
-	if len(addLabels) <= 0 {
+	if len(addLabels) == 0 {
 		return nil
 	}
 
@@ -43,6 +49,7 @@ func (bot *robot) handleLabels(e giteeclient.NoteEventWrapper, mLabels *match, p
 	if err != nil {
 		return err
 	}
+
 	isCollaborator, _ := bot.cli.IsCollaborator(org, repo, e.GetCommenter())
 
 	return handleAddLabels(nh, repoLabels, addLabels, isCollaborator)
@@ -60,7 +67,9 @@ func (bot *robot) handleClearLabel(handle *prNoteHandle, cfg *botConfig) error {
 	}
 
 	comment := fmt.Sprintf(
-		"This pull request source branch has changed, label(s): %s has been removed.", strings.Join(removed, ","))
+		"This pull request source branch has changed, label(s): %s has been removed.",
+		strings.Join(removed, ","),
+	)
 
 	return handle.addComment(comment)
 }
@@ -71,13 +80,13 @@ func handleAddLabels(nh noteHandler, repoLabels map[string]string, labelsToAdd [
 		return err
 	}
 
-	var canNotAddLabels []string
-	var canAddLabels []string
+	var canNotAddLabels, canAddLabels []string
 
 	for _, labelToAdd := range labelsToAdd {
 		if _, ok := noteLabels[labelToAdd]; ok {
 			continue
 		}
+
 		if _, ok := repoLabels[labelToAdd]; !ok && !isCollaborator {
 			canNotAddLabels = append(canNotAddLabels, labelToAdd)
 		} else {
@@ -96,6 +105,7 @@ func handleAddLabels(nh noteHandler, repoLabels map[string]string, labelsToAdd [
 			"The label(s) `%s` cannot be applied, because the repository doesn't have them",
 			strings.Join(canNotAddLabels, ", "),
 		)
+
 		return nh.addComment(msg)
 	}
 
@@ -109,12 +119,15 @@ func handleRemoveLabels(nh noteHandler, removeLabels []string) (removed []string
 	}
 
 	var rmFails []string
+
 	for _, rmLabel := range removeLabels {
 		if label, ok := eventSubjectLabels[rmLabel]; ok {
 			if err := nh.removeLabel(label); err != nil {
 				rmFails = append(rmFails, fmt.Sprintf("%s labe remove fiald with err: %s", label, err.Error()))
+
 				continue
 			}
+
 			removed = append(removed, label)
 		}
 	}
@@ -122,5 +135,6 @@ func handleRemoveLabels(nh noteHandler, removeLabels []string) (removed []string
 	if len(rmFails) > 0 {
 		err = fmt.Errorf("failed remove some labels, details : %s", strings.Join(rmFails, ";"))
 	}
+
 	return
 }

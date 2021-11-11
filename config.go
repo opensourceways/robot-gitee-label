@@ -15,6 +15,7 @@ func (c *configuration) configFor(org, repo string) *botConfig {
 
 	items := c.ConfigItems
 	v := make([]libconfig.IPluginForRepo, len(items))
+
 	for i := range items {
 		v[i] = &items[i]
 	}
@@ -22,6 +23,7 @@ func (c *configuration) configFor(org, repo string) *botConfig {
 	if i := libconfig.FindConfig(org, repo, v); i >= 0 {
 		return &items[i]
 	}
+
 	return nil
 }
 
@@ -36,6 +38,7 @@ func (c *configuration) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -53,7 +56,7 @@ func (c *configuration) SetDefault() {
 type botConfig struct {
 	libconfig.PluginForRepo
 
-	//ClearLabels specifies labels that should be removed when the codes of PR are changed.
+	// ClearLabels specifies labels that should be removed when the codes of PR are changed.
 	ClearLabels []string `json:"clear_labels,omitempty"`
 }
 
@@ -63,4 +66,3 @@ func (c *botConfig) setDefault() {
 func (c *botConfig) validate() error {
 	return c.PluginForRepo.Validate()
 }
-

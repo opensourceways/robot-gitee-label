@@ -47,10 +47,12 @@ func (bot *robot) getConfig(cfg libconfig.PluginConfig, org, repo string) (*botC
 	if !ok {
 		return nil, fmt.Errorf("can't convert to configuration")
 	}
+
 	if bc := c.configFor(org, repo); bc != nil {
 		return bc, nil
 	}
-	return nil, fmt.Errorf("no %s robot config for this repo:%s/%s", botName, org, repo)
+
+	return nil, fmt.Errorf("no config for this repo:%s/%s", org, repo)
 }
 
 func (bot *robot) RegisterEventHandler(p libplugin.HandlerRegitster) {
@@ -66,10 +68,14 @@ func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc libconfig.PluginConf
 		return err
 	}
 
-	prHandle := &prNoteHandle{client: bot.cli, org: prInfo.Org, repo: prInfo.Repo, number: prInfo.Number}
+	prHandle := &prNoteHandle{
+		client: bot.cli,
+		org:    prInfo.Org,
+		repo:   prInfo.Repo,
+		number: prInfo.Number,
+	}
 
-	action := giteeclient.GetPullRequestAction(e)
-	if action == giteeclient.PRActionChangedSourceBranch {
+	if giteeclient.GetPullRequestAction(e) == giteeclient.PRActionChangedSourceBranch {
 		return bot.handleClearLabel(prHandle, cfg)
 	}
 
@@ -80,12 +86,14 @@ func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc libconfig.PluginConfig, l
 	ne := giteeclient.NewNoteEventWrapper(e)
 	if !ne.IsCreatingCommentEvent() {
 		log.Debug("Event is not a creation of a comment, skipping.")
+
 		return nil
 	}
 
 	matchLabels := genMachLabels(ne.GetComment())
 	if matchLabels == nil {
-		log.Debug("comment content needn't handle, skipping.")
+		log.Debug("invalid comment, skipping.")
+
 		return nil
 	}
 
@@ -97,5 +105,6 @@ func (bot *robot) getRepoLabelsMap(org, repo string) (map[string]string, error) 
 	if err != nil {
 		return nil, err
 	}
+
 	return labelsTransformMap(repoLabels), nil
 }

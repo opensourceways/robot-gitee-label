@@ -37,6 +37,7 @@ func (inh *issueNoteHandle) getLabels() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return labelsTransformMap(labels), nil
 }
 
@@ -64,14 +65,17 @@ func (pnh *prNoteHandle) getLabels() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return labelsTransformMap(labels), nil
 }
 
 func labelsTransformMap(labels []gitee.Label) map[string]string {
 	lm := make(map[string]string, len(labels))
+
 	for _, v := range labels {
 		k := strings.ToLower(v.Name)
 		lm[k] = v.Name
 	}
+
 	return lm
 }
