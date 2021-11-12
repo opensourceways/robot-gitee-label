@@ -6,7 +6,6 @@ import (
 
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	"github.com/opensourceways/community-robot-lib/utils"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -15,16 +14,14 @@ func (bot *robot) handleLabels(
 	toAdd []string,
 	toRemove []string,
 	cfg *botConfig,
-	log *logrus.Entry,
 ) error {
-
 	lh := genLabelHelper(e, bot.cli)
 	if lh == nil {
 		return nil
 	}
 
-	add := newSetsHelper(toAdd)
-	remove := newSetsHelper(toRemove)
+	add := newLabelSetsHelper(toAdd)
+	remove := newLabelSetsHelper(toRemove)
 	if v := add.intersection(remove); len(v) > 0 {
 		return lh.addComment(fmt.Sprintf(
 			"conflict labels(%s) exit", strings.Join(add.origin(v), ", "),
@@ -76,7 +73,7 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 	return nil
 }
 
-func addLabels(lh labelHelper, toAdd *setsHelper, commenter string, cfg *botConfig) error {
+func addLabels(lh labelHelper, toAdd *labelSetsHelper, commenter string, cfg *botConfig) error {
 	canAdd, missing, err := checkLabesToAdd(lh, toAdd, commenter, cfg)
 	if err != nil {
 		return err
@@ -109,16 +106,15 @@ func addLabels(lh labelHelper, toAdd *setsHelper, commenter string, cfg *botConf
 
 func checkLabesToAdd(
 	h labelHelper,
-	toAdd *setsHelper,
+	toAdd *labelSetsHelper,
 	commenter string,
 	cfg *botConfig,
 ) ([]string, []string, error) {
-
 	v, err := h.getLabelsOfRepo()
 	if err != nil {
 		return nil, nil, err
 	}
-	repoLabels := newSetsHelper(v)
+	repoLabels := newLabelSetsHelper(v)
 
 	missing := toAdd.difference(repoLabels)
 	if len(missing) == 0 {
@@ -146,20 +142,15 @@ func checkLabesToAdd(
 	return canAdd, missing, nil
 }
 
-func removeLabels(lh labelHelper, toRemove *setsHelper) ([]string, error) {
+func removeLabels(lh labelHelper, toRemove *labelSetsHelper) ([]string, error) {
 	v, err := lh.getLabelsOfRepo()
 	if err != nil {
 		return nil, err
 	}
-	repoLabels := newSetsHelper(v)
+	repoLabels := newLabelSetsHelper(v)
 
-	labels := repoLabels.intersection(toRemove)
-	if len(labels) == 0 {
-		return nil, nil
-	}
-
-	ls := lh.getCurrentLabels().Intersection(
-		sets.NewString(repoLabels.origin(labels)...)).UnsortedList()
+	ls := lh.getCurrentLabels().Intersection(sets.NewString(
+		repoLabels.origin(toRemove.toList())...)).UnsortedList()
 
 	if len(ls) == 0 {
 		return nil, nil

@@ -89,24 +89,20 @@ func (h *prLabelHelper) addComment(comment string) error {
 	return h.cli.CreatePRComment(h.org, h.repo, h.number, comment)
 }
 
-func getIntersection(a sets.String, b []string) []string {
-	return a.Intersection(sets.NewString(b...)).UnsortedList()
-}
-
-type setsHelper struct {
+type labelSetsHelper struct {
 	m map[string]string
 	s sets.String
 }
 
-func (h *setsHelper) intersection(h1 *setsHelper) []string {
+func (h *labelSetsHelper) intersection(h1 *labelSetsHelper) []string {
 	return h.s.Intersection(h1.s).UnsortedList()
 }
 
-func (h *setsHelper) difference(h1 *setsHelper) []string {
+func (h *labelSetsHelper) difference(h1 *labelSetsHelper) []string {
 	return h.s.Difference(h1.s).UnsortedList()
 }
 
-func (h *setsHelper) origin(data []string) []string {
+func (h *labelSetsHelper) origin(data []string) []string {
 	r := make([]string, 0, len(data))
 	for _, item := range data {
 		if v, ok := h.m[item]; ok {
@@ -116,19 +112,19 @@ func (h *setsHelper) origin(data []string) []string {
 	return r
 }
 
-func (h *setsHelper) count() int {
+func (h *labelSetsHelper) count() int {
 	return len(h.m)
 }
 
-func (h *setsHelper) toList() []string {
+func (h *labelSetsHelper) toList() []string {
 	return h.s.UnsortedList()
 }
 
-func (h *setsHelper) differenceSlice(data []string) []string {
+func (h *labelSetsHelper) differenceSlice(data []string) []string {
 	return h.s.Difference(sets.NewString(data...)).UnsortedList()
 }
 
-func newSetsHelper(data []string) *setsHelper {
+func newLabelSetsHelper(data []string) *labelSetsHelper {
 	m := map[string]string{}
 	v := make([]string, len(data))
 	for i := range data {
@@ -136,8 +132,12 @@ func newSetsHelper(data []string) *setsHelper {
 		m[v[i]] = data[i]
 	}
 
-	return &setsHelper{
+	return &labelSetsHelper{
 		m: m,
 		s: sets.NewString(v...),
 	}
+}
+
+func getIntersection(a sets.String, b []string) []string {
+	return a.Intersection(sets.NewString(b...)).UnsortedList()
 }
