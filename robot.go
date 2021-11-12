@@ -23,6 +23,7 @@ type iClient interface {
 	AddMultiIssueLabel(org, repo, number string, label []string) error
 	AddMultiPRLabel(org, repo string, number int32, label []string) error
 	RemovePRLabel(org, repo string, number int32, label string) error
+	RemovePRLabels(org, repo string, number int32, labels []string) error
 
 	CreatePRComment(org, repo string, number int32, comment string) error
 	CreateIssueComment(org, repo string, number string, comment string) error
@@ -61,50 +62,27 @@ func (bot *robot) RegisterEventHandler(p libplugin.HandlerRegitster) {
 }
 
 func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
-	prInfo := giteeclient.GetPRInfoByPREvent(e)
-
-	cfg, err := bot.getConfig(pc, prInfo.Org, prInfo.Repo)
-	if err != nil {
-		return err
-	}
-
-	prHandle := &prNoteHandle{
-		client: bot.cli,
-		org:    prInfo.Org,
-		repo:   prInfo.Repo,
-		number: prInfo.Number,
-	}
-
-	if giteeclient.GetPullRequestAction(e) == giteeclient.PRActionChangedSourceBranch {
-		return bot.handleClearLabel(prHandle, cfg)
-	}
-
-	return nil
+	return bot.handleClearLabel(e, pc, log)
 }
 
 func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
 	ne := giteeclient.NewNoteEventWrapper(e)
 	if !ne.IsCreatingCommentEvent() {
 		log.Debug("Event is not a creation of a comment, skipping.")
-
 		return nil
 	}
 
-	matchLabels := genMachLabels(ne.GetComment())
-	if matchLabels == nil {
-		log.Debug("invalid comment, skipping.")
-
-		return nil
-	}
-
-	return bot.handleLabels(ne, matchLabels, pc, log)
-}
-
-func (bot *robot) getRepoLabelsMap(org, repo string) (map[string]string, error) {
-	repoLabels, err := bot.cli.GetRepoLabels(org, repo)
+	org, repo := ne.GetOrgRep()
+	cfg, err := bot.getConfig(pc, org, repo)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return labelsTransformMap(repoLabels), nil
+	toAdd, toRemove := getMatchedLabels(ne.GetComment())
+	if len(toAdd) == 0 && len(toRemove) == 0 {
+		log.Debug("invalid comment, skipping.")
+		return nil
+	}
+
+	return bot.handleLabels(ne, toAdd, toRemove, cfg, log)
 }

@@ -58,6 +58,10 @@ type botConfig struct {
 
 	// ClearLabels specifies labels that should be removed when the codes of PR are changed.
 	ClearLabels []string `json:"clear_labels,omitempty"`
+
+	// AllowCreatingLabelsByCollaborator is a tag which will lead to create unavailable labels
+	// by collaborator if it is true.
+	AllowCreatingLabelsByCollaborator bool `json:"allow_creating_labels_by_collaborator,omitempty"`
 }
 
 func (c *botConfig) setDefault() {
