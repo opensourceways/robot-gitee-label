@@ -8,6 +8,7 @@ import (
 	libconfig "github.com/opensourceways/community-robot-lib/config"
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
@@ -21,11 +22,7 @@ func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, pc libconfig.PluginC
 	if err != nil {
 		return err
 	}
-	if len(cfg.ClearLabels) == 0 {
-		return nil
-	}
-
-	toRemove := getIntersection(prInfo.Labels, cfg.ClearLabels)
+	toRemove := getClearLabels(prInfo.Labels, cfg)
 	if len(toRemove) == 0 {
 		return nil
 	}
@@ -41,4 +38,28 @@ func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, pc libconfig.PluginC
 	)
 
 	return bot.cli.CreatePRComment(prInfo.Org, prInfo.Repo, prInfo.Number, comment)
+}
+
+func getClearLabels(labels sets.String, cfg *botConfig) []string {
+	var r []string
+
+	all := labels
+	if len(cfg.ClearLabels) > 0 {
+		v := all.Intersection(sets.NewString(cfg.ClearLabels...))
+		if v.Len() > 0 {
+			r = v.UnsortedList()
+			all = all.Difference(v)
+		}
+	}
+
+	exp := cfg.clearLabelsByRegexp
+	if exp != nil {
+		for k := range all {
+			if exp.MatchString(k) {
+				r = append(r, k)
+			}
+		}
+	}
+
+	return r
 }

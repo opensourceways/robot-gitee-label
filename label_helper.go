@@ -137,7 +137,3 @@ func newLabelSetsHelper(data []string) *labelSetsHelper {
 		s: sets.NewString(v...),
 	}
 }
-
-func getIntersection(a sets.String, b []string) []string {
-	return a.Intersection(sets.NewString(b...)).UnsortedList()
-}
