@@ -33,7 +33,7 @@ func (h *repoLabelHelper) getLabelsOfRepo() (sets.String, error) {
 type labelHelper interface {
 	addLabel([]string) error
 	removeLabel([]string) error
-	getCurrentLabels() (sets.String, error)
+	getCurrentLabels() sets.String
 	addComment(string) error
 
 	iRepoLabelHelper
@@ -54,8 +54,8 @@ func (h *issueLabelHelper) removeLabel(label []string) error {
 	return nil
 }
 
-func (h *issueLabelHelper) getCurrentLabels() (sets.String, error) {
-	return h.labels, nil
+func (h *issueLabelHelper) getCurrentLabels() sets.String {
+	return h.labels
 }
 
 func (h *issueLabelHelper) addComment(comment string) error {
@@ -77,8 +77,8 @@ func (h *prLabelHelper) removeLabel(label []string) error {
 	return h.cli.RemovePRLabels(h.org, h.repo, h.number, label)
 }
 
-func (h *prLabelHelper) getCurrentLabels() (sets.String, error) {
-	return h.labels, nil
+func (h *prLabelHelper) getCurrentLabels() sets.String {
+	return h.labels
 }
 
 func (h *prLabelHelper) addComment(comment string) error {

@@ -526,8 +526,8 @@ go_repository(
 go_repository(
     name = "com_github_opensourceways_community_robot_lib",
     importpath = "github.com/opensourceways/community-robot-lib",
-    sum = "h1:ypQQ0EdbIxu76UFL4thF4e8l4qtqFv0nmp86z7kYQoY=",
-    version = "v0.0.0-20211104021418-3cab1bc0354c",
+    sum = "h1:pfuFuWGg//Y7kPzbsdhDwmC6ZmvhnLH/zCw4WvFnapo=",
+    version = "v0.0.0-20211112035019-6935a6becd93",
 )
 
 go_repository(

@@ -57,17 +57,16 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 		ne := giteeclient.NewPRNoteEvent(e.NoteEvent)
 		return &prLabelHelper{
 			number:          ne.GetPRNumber(),
-			labels:          nil,
+			labels:          ne.GetPRLabels(),
 			repoLabelHelper: rlh,
 		}
-
 	}
 
 	if e.IsIssue() {
 		ne := giteeclient.NewIssueNoteEvent(e.NoteEvent)
 		return &issueLabelHelper{
 			number:          ne.GetIssueNumber(),
-			labels:          nil,
+			labels:          ne.GetIssueLabels(),
 			repoLabelHelper: rlh,
 		}
 	}
@@ -75,12 +74,7 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 }
 
 func addLabels(h labelHelper, toAdd []string, commenter string, cfg *botConfig, log *logrus.Entry) error {
-	labels, err := h.getCurrentLabels()
-	if err != nil {
-		return err
-	}
-
-	ls := getDifference(toAdd, labels)
+	ls := getDifference(toAdd, h.getCurrentLabels())
 	if len(ls) == 0 {
 		return nil
 	}
@@ -144,13 +138,8 @@ func getLabelsCanAdd(
 	return getIntersection(repoLabels, toAdd), missing, nil
 }
 
-func removeLabels(lh labelHelper, toRemove []string) (removed []string, err error) {
-	labels, err := lh.getCurrentLabels()
-	if err != nil {
-		return
-	}
-
-	ls := getIntersection(labels, toRemove)
+func removeLabels(lh labelHelper, toRemove []string) ([]string, error) {
+	ls := getIntersection(lh.getCurrentLabels(), toRemove)
 	if len(ls) == 0 {
 		return nil, nil
 	}
