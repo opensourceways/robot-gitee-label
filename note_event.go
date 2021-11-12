@@ -7,6 +7,7 @@ import (
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	"github.com/opensourceways/community-robot-lib/utils"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func (bot *robot) handleLabels(
@@ -22,22 +23,24 @@ func (bot *robot) handleLabels(
 		return nil
 	}
 
-	if v := getIntersectionBetweenSlices(toAdd, toRemove); len(v) > 0 {
+	add := newSetsHelper(toAdd)
+	remove := newSetsHelper(toRemove)
+	if v := add.intersection(remove); len(v) > 0 {
 		return lh.addComment(fmt.Sprintf(
-			"conflict labels(%s) exit", strings.Join(v, ", "),
+			"conflict labels(%s) exit", strings.Join(add.origin(v), ", "),
 		))
 	}
 
 	merr := utils.NewMultiErrors()
 
-	if len(toRemove) > 0 {
-		if _, err := removeLabels(lh, toRemove); err != nil {
+	if remove.count() > 0 {
+		if _, err := removeLabels(lh, remove); err != nil {
 			merr.AddError(err)
 		}
 	}
 
-	if len(toAdd) > 0 {
-		err := addLabels(lh, toAdd, e.GetCommenter(), cfg, log)
+	if add.count() > 0 {
+		err := addLabels(lh, add, e.GetCommenter(), cfg)
 		if err != nil {
 			merr.AddError(err)
 		}
@@ -73,13 +76,8 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 	return nil
 }
 
-func addLabels(h labelHelper, toAdd []string, commenter string, cfg *botConfig, log *logrus.Entry) error {
-	ls := getDifference(toAdd, h.getCurrentLabels())
-	if len(ls) == 0 {
-		return nil
-	}
-
-	canAdd, missing, err := getLabelsCanAdd(h, ls, commenter, cfg, log)
+func addLabels(lh labelHelper, toAdd *setsHelper, commenter string, cfg *botConfig) error {
+	canAdd, missing, err := checkLabesToAdd(lh, toAdd, commenter, cfg)
 	if err != nil {
 		return err
 	}
@@ -87,8 +85,11 @@ func addLabels(h labelHelper, toAdd []string, commenter string, cfg *botConfig, 
 	merr := utils.NewMultiErrors()
 
 	if len(canAdd) > 0 {
-		if err := h.addLabel(canAdd); err != nil {
-			merr.AddError(err)
+		ls := sets.NewString(canAdd...).Difference(lh.getCurrentLabels())
+		if ls.Len() > 0 {
+			if err := lh.addLabel(ls.UnsortedList()); err != nil {
+				merr.AddError(err)
+			}
 		}
 	}
 
@@ -98,7 +99,7 @@ func addLabels(h labelHelper, toAdd []string, commenter string, cfg *botConfig, 
 			strings.Join(missing, ", "),
 		)
 
-		if err := h.addComment(msg); err != nil {
+		if err := lh.addComment(msg); err != nil {
 			merr.AddError(err)
 		}
 	}
@@ -106,43 +107,62 @@ func addLabels(h labelHelper, toAdd []string, commenter string, cfg *botConfig, 
 	return merr.Err()
 }
 
-func getLabelsCanAdd(
+func checkLabesToAdd(
 	h labelHelper,
-	toAdd []string,
+	toAdd *setsHelper,
 	commenter string,
 	cfg *botConfig,
-	log *logrus.Entry,
 ) ([]string, []string, error) {
 
-	repoLabels, err := h.getLabelsOfRepo()
+	v, err := h.getLabelsOfRepo()
 	if err != nil {
 		return nil, nil, err
 	}
+	repoLabels := newSetsHelper(v)
 
-	missing := getDifference(toAdd, repoLabels)
+	missing := toAdd.difference(repoLabels)
 	if len(missing) == 0 {
-		return toAdd, nil, nil
+		return repoLabels.origin(toAdd.toList()), nil, nil
 	}
+
+	var canAdd []string
+	if len(missing) < toAdd.count() {
+		canAdd = repoLabels.origin(toAdd.differenceSlice(missing))
+	}
+
+	missing = toAdd.origin(missing)
 
 	if !cfg.AllowCreatingLabelsByCollaborator {
-		return getIntersection(repoLabels, toAdd), missing, nil
+		return canAdd, missing, nil
 	}
 
-	v, err := h.isCollaborator(commenter)
-	if v {
-		return toAdd, nil, nil
-	}
+	b, err := h.isCollaborator(commenter)
 	if err != nil {
-		log.WithError(err).Error("check whether is collaborator")
+		return nil, nil, err
 	}
-	return getIntersection(repoLabels, toAdd), missing, nil
+	if b {
+		return append(canAdd, missing...), nil, nil
+	}
+	return canAdd, missing, nil
 }
 
-func removeLabels(lh labelHelper, toRemove []string) ([]string, error) {
-	ls := getIntersection(lh.getCurrentLabels(), toRemove)
-	if len(ls) == 0 {
+func removeLabels(lh labelHelper, toRemove *setsHelper) ([]string, error) {
+	v, err := lh.getLabelsOfRepo()
+	if err != nil {
+		return nil, err
+	}
+	repoLabels := newSetsHelper(v)
+
+	labels := repoLabels.intersection(toRemove)
+	if len(labels) == 0 {
 		return nil, nil
 	}
 
+	ls := lh.getCurrentLabels().Intersection(
+		sets.NewString(repoLabels.origin(labels)...)).UnsortedList()
+
+	if len(ls) == 0 {
+		return nil, nil
+	}
 	return ls, lh.removeLabel(ls)
 }
