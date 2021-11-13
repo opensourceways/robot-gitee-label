@@ -94,34 +94,30 @@ type labelSet struct {
 	s sets.String
 }
 
-func (h *labelSet) intersection(h1 *labelSet) []string {
-	return h.s.Intersection(h1.s).UnsortedList()
+func (ls *labelSet) count() int {
+	return len(ls.m)
 }
 
-func (h *labelSet) difference(h1 *labelSet) []string {
-	return h.s.Difference(h1.s).UnsortedList()
+func (ls *labelSet) toList() []string {
+	return ls.s.UnsortedList()
 }
 
-func (h *labelSet) origin(data []string) []string {
+func (ls *labelSet) origin(data []string) []string {
 	r := make([]string, 0, len(data))
 	for _, item := range data {
-		if v, ok := h.m[item]; ok {
+		if v, ok := ls.m[item]; ok {
 			r = append(r, v)
 		}
 	}
 	return r
 }
 
-func (h *labelSet) count() int {
-	return len(h.m)
+func (ls *labelSet) intersection(ls1 *labelSet) []string {
+	return ls.s.Intersection(ls1.s).UnsortedList()
 }
 
-func (h *labelSet) toList() []string {
-	return h.s.UnsortedList()
-}
-
-func (h *labelSet) differenceSlice(data []string) []string {
-	return h.s.Difference(sets.NewString(data...)).UnsortedList()
+func (ls *labelSet) difference(ls1 *labelSet) []string {
+	return ls.s.Difference(ls1.s).UnsortedList()
 }
 
 func newLabelSet(data []string) *labelSet {

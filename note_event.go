@@ -123,7 +123,7 @@ func checkLabesToAdd(
 
 	var canAdd []string
 	if len(missing) < toAdd.count() {
-		canAdd = repoLabels.origin(toAdd.differenceSlice(missing))
+		canAdd = repoLabels.origin(toAdd.intersection(repoLabels))
 	}
 
 	missing = toAdd.origin(missing)
