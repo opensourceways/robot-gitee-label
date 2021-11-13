@@ -35,8 +35,8 @@ func (h *repoLabelHelper) getLabelsOfRepo() ([]string, error) {
 }
 
 type labelHelper interface {
-	addLabel([]string) error
-	removeLabel([]string) error
+	addLabels([]string) error
+	removeLabels([]string) error
 	getCurrentLabels() sets.String
 	addComment(string) error
 
@@ -50,12 +50,12 @@ type issueLabelHelper struct {
 	labels sets.String
 }
 
-func (h *issueLabelHelper) addLabel(label []string) error {
+func (h *issueLabelHelper) addLabels(label []string) error {
 	return h.cli.AddMultiIssueLabel(h.org, h.repo, h.number, label)
 }
 
-func (h *issueLabelHelper) removeLabel(label []string) error {
-	return nil
+func (h *issueLabelHelper) removeLabels(label []string) error {
+	return h.cli.RemoveIssueLabels(h.org, h.repo, h.number, label)
 }
 
 func (h *issueLabelHelper) getCurrentLabels() sets.String {
@@ -73,11 +73,11 @@ type prLabelHelper struct {
 	labels sets.String
 }
 
-func (h *prLabelHelper) addLabel(label []string) error {
+func (h *prLabelHelper) addLabels(label []string) error {
 	return h.cli.AddMultiPRLabel(h.org, h.repo, h.number, label)
 }
 
-func (h *prLabelHelper) removeLabel(label []string) error {
+func (h *prLabelHelper) removeLabels(label []string) error {
 	return h.cli.RemovePRLabels(h.org, h.repo, h.number, label)
 }
 
@@ -89,20 +89,20 @@ func (h *prLabelHelper) addComment(comment string) error {
 	return h.cli.CreatePRComment(h.org, h.repo, h.number, comment)
 }
 
-type labelSetsHelper struct {
+type labelSet struct {
 	m map[string]string
 	s sets.String
 }
 
-func (h *labelSetsHelper) intersection(h1 *labelSetsHelper) []string {
+func (h *labelSet) intersection(h1 *labelSet) []string {
 	return h.s.Intersection(h1.s).UnsortedList()
 }
 
-func (h *labelSetsHelper) difference(h1 *labelSetsHelper) []string {
+func (h *labelSet) difference(h1 *labelSet) []string {
 	return h.s.Difference(h1.s).UnsortedList()
 }
 
-func (h *labelSetsHelper) origin(data []string) []string {
+func (h *labelSet) origin(data []string) []string {
 	r := make([]string, 0, len(data))
 	for _, item := range data {
 		if v, ok := h.m[item]; ok {
@@ -112,19 +112,19 @@ func (h *labelSetsHelper) origin(data []string) []string {
 	return r
 }
 
-func (h *labelSetsHelper) count() int {
+func (h *labelSet) count() int {
 	return len(h.m)
 }
 
-func (h *labelSetsHelper) toList() []string {
+func (h *labelSet) toList() []string {
 	return h.s.UnsortedList()
 }
 
-func (h *labelSetsHelper) differenceSlice(data []string) []string {
+func (h *labelSet) differenceSlice(data []string) []string {
 	return h.s.Difference(sets.NewString(data...)).UnsortedList()
 }
 
-func newLabelSetsHelper(data []string) *labelSetsHelper {
+func newLabelSet(data []string) *labelSet {
 	m := map[string]string{}
 	v := make([]string, len(data))
 	for i := range data {
@@ -132,7 +132,7 @@ func newLabelSetsHelper(data []string) *labelSetsHelper {
 		m[v[i]] = data[i]
 	}
 
-	return &labelSetsHelper{
+	return &labelSet{
 		m: m,
 		s: sets.NewString(v...),
 	}

@@ -27,6 +27,7 @@ go_library(
         "main.go",
         "note_event.go",
         "robot.go",
+        "squash.go",
     ],
     importpath = "github.com/opensourceways/robot-gitee-label",
     visibility = ["//visibility:private"],

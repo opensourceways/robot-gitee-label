@@ -20,8 +20,8 @@ func (bot *robot) handleLabels(
 		return nil
 	}
 
-	add := newLabelSetsHelper(toAdd)
-	remove := newLabelSetsHelper(toRemove)
+	add := newLabelSet(toAdd)
+	remove := newLabelSet(toRemove)
 	if v := add.intersection(remove); len(v) > 0 {
 		return lh.addComment(fmt.Sprintf(
 			"conflict labels(%s) exit", strings.Join(add.origin(v), ", "),
@@ -73,7 +73,7 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 	return nil
 }
 
-func addLabels(lh labelHelper, toAdd *labelSetsHelper, commenter string, cfg *botConfig) error {
+func addLabels(lh labelHelper, toAdd *labelSet, commenter string, cfg *botConfig) error {
 	canAdd, missing, err := checkLabesToAdd(lh, toAdd, commenter, cfg)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func addLabels(lh labelHelper, toAdd *labelSetsHelper, commenter string, cfg *bo
 	if len(canAdd) > 0 {
 		ls := sets.NewString(canAdd...).Difference(lh.getCurrentLabels())
 		if ls.Len() > 0 {
-			if err := lh.addLabel(ls.UnsortedList()); err != nil {
+			if err := lh.addLabels(ls.UnsortedList()); err != nil {
 				merr.AddError(err)
 			}
 		}
@@ -106,7 +106,7 @@ func addLabels(lh labelHelper, toAdd *labelSetsHelper, commenter string, cfg *bo
 
 func checkLabesToAdd(
 	h labelHelper,
-	toAdd *labelSetsHelper,
+	toAdd *labelSet,
 	commenter string,
 	cfg *botConfig,
 ) ([]string, []string, error) {
@@ -114,7 +114,7 @@ func checkLabesToAdd(
 	if err != nil {
 		return nil, nil, err
 	}
-	repoLabels := newLabelSetsHelper(v)
+	repoLabels := newLabelSet(v)
 
 	missing := toAdd.difference(repoLabels)
 	if len(missing) == 0 {
@@ -142,12 +142,12 @@ func checkLabesToAdd(
 	return canAdd, missing, nil
 }
 
-func removeLabels(lh labelHelper, toRemove *labelSetsHelper) ([]string, error) {
+func removeLabels(lh labelHelper, toRemove *labelSet) ([]string, error) {
 	v, err := lh.getLabelsOfRepo()
 	if err != nil {
 		return nil, err
 	}
-	repoLabels := newLabelSetsHelper(v)
+	repoLabels := newLabelSet(v)
 
 	ls := lh.getCurrentLabels().Intersection(sets.NewString(
 		repoLabels.origin(toRemove.toList())...)).UnsortedList()
@@ -155,5 +155,5 @@ func removeLabels(lh labelHelper, toRemove *labelSetsHelper) ([]string, error) {
 	if len(ls) == 0 {
 		return nil, nil
 	}
-	return ls, lh.removeLabel(ls)
+	return ls, lh.removeLabels(ls)
 }

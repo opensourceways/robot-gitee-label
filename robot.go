@@ -19,7 +19,7 @@ type iClient interface {
 	GetPRLabels(org, repo string, number int32) ([]sdk.Label, error)
 
 	AddIssueLabel(org, repo, number, label string) error
-	RemoveIssueLabel(org, repo, number, label string) error
+	RemoveIssueLabels(org, repo, number string, label []string) error
 
 	AddMultiIssueLabel(org, repo, number string, label []string) error
 	AddMultiPRLabel(org, repo string, number int32, label []string) error
