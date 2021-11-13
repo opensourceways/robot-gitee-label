@@ -69,9 +69,12 @@ type botConfig struct {
 	// AllowCreatingLabelsByCollaborator is a tag which will lead to create unavailable labels
 	// by collaborator if it is true.
 	AllowCreatingLabelsByCollaborator bool `json:"allow_creating_labels_by_collaborator,omitempty"`
+
+	SquashConfig
 }
 
 func (c *botConfig) setDefault() {
+	c.SquashConfig.setDefault()
 }
 
 func (c *botConfig) validate() error {
@@ -83,4 +86,28 @@ func (c *botConfig) validate() error {
 		c.clearLabelsByRegexp = v
 	}
 	return c.PluginForRepo.Validate()
+}
+
+type SquashConfig struct {
+	// CommitsThreshold Check the threshold of the number of PR commits,
+	// and add the label specified by SquashCommitLabel to the PR if this value is exceeded.
+	// zero means no check.
+	CommitsThreshold uint `json:"commits_threshold,omitempty"`
+
+	// SquashCommitLabel Specify the label whose PR exceeds the threshold. default: stat/needs-squash
+	SquashCommitLabel string `json:"squash_commit_label,omitempty"`
+}
+
+func (c *SquashConfig) setDefault() {
+	if c.CommitsThreshold == 0 {
+		c.CommitsThreshold = 1
+	}
+
+	if c.SquashCommitLabel == "" {
+		c.SquashCommitLabel = "stat/needs-squash"
+	}
+}
+
+func (c SquashConfig) needCheckCommits() bool {
+	return c.CommitsThreshold > 0
 }

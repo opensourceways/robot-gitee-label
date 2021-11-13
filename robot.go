@@ -7,6 +7,7 @@ import (
 	libconfig "github.com/opensourceways/community-robot-lib/config"
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	libplugin "github.com/opensourceways/community-robot-lib/giteeplugin"
+	"github.com/opensourceways/community-robot-lib/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,6 +23,7 @@ type iClient interface {
 
 	AddMultiIssueLabel(org, repo, number string, label []string) error
 	AddMultiPRLabel(org, repo string, number int32, label []string) error
+	AddPRLabel(org, repo string, number int32, label string) error
 	RemovePRLabel(org, repo string, number int32, label string) error
 	RemovePRLabels(org, repo string, number int32, labels []string) error
 
@@ -62,7 +64,26 @@ func (bot *robot) RegisterEventHandler(p libplugin.HandlerRegitster) {
 }
 
 func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
-	return bot.handleClearLabel(e, pc, log)
+	prInfo := giteeclient.GetPRInfoByPREvent(e)
+
+	cfg, err := bot.getConfig(pc, prInfo.Org, prInfo.Repo)
+	if err != nil {
+		return err
+	}
+
+	action := giteeclient.GetPullRequestAction(e)
+
+	merr := utils.NewMultiErrors()
+	if err = bot.handleClearLabel(action, prInfo, cfg); err != nil {
+		merr.AddError(err)
+	}
+
+	commits := uint(e.Commits)
+	if err = bot.handleSquashLabel(action, prInfo, commits, cfg.SquashConfig); err != nil {
+		merr.AddError(err)
+	}
+
+	return merr.Err()
 }
 
 func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {

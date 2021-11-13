@@ -4,30 +4,21 @@ import (
 	"fmt"
 	"strings"
 
-	sdk "gitee.com/openeuler/go-gitee/gitee"
-	libconfig "github.com/opensourceways/community-robot-lib/config"
 	"github.com/opensourceways/community-robot-lib/giteeclient"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
-	if giteeclient.GetPullRequestAction(e) != giteeclient.PRActionChangedSourceBranch {
+func (bot *robot) handleClearLabel(action string, prInfo giteeclient.PRInfo, cfg *botConfig) error {
+	if action != giteeclient.PRActionChangedSourceBranch {
 		return nil
 	}
 
-	prInfo := giteeclient.GetPRInfoByPREvent(e)
-
-	cfg, err := bot.getConfig(pc, prInfo.Org, prInfo.Repo)
-	if err != nil {
-		return err
-	}
 	toRemove := getClearLabels(prInfo.Labels, cfg)
 	if len(toRemove) == 0 {
 		return nil
 	}
 
-	err = bot.cli.RemovePRLabels(prInfo.Org, prInfo.Repo, prInfo.Number, toRemove)
+	err := bot.cli.RemovePRLabels(prInfo.Org, prInfo.Repo, prInfo.Number, toRemove)
 	if err != nil {
 		return err
 	}
