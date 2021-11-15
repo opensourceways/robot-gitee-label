@@ -78,7 +78,7 @@ func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc libconfig.PluginConf
 		merr.AddError(err)
 	}
 
-	commits := uint(e.Commits)
+	commits := uint(e.PullRequest.Commits)
 	if err = bot.handleSquashLabel(action, prInfo, commits, cfg.SquashConfig); err != nil {
 		merr.AddError(err)
 	}
