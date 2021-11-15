@@ -7,6 +7,7 @@ import (
 	libconfig "github.com/opensourceways/community-robot-lib/config"
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	libplugin "github.com/opensourceways/community-robot-lib/giteeplugin"
+	"github.com/opensourceways/community-robot-lib/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,11 +19,13 @@ type iClient interface {
 	GetPRLabels(org, repo string, number int32) ([]sdk.Label, error)
 
 	AddIssueLabel(org, repo, number, label string) error
-	RemoveIssueLabel(org, repo, number, label string) error
+	RemoveIssueLabels(org, repo, number string, label []string) error
 
 	AddMultiIssueLabel(org, repo, number string, label []string) error
 	AddMultiPRLabel(org, repo string, number int32, label []string) error
+	AddPRLabel(org, repo string, number int32, label string) error
 	RemovePRLabel(org, repo string, number int32, label string) error
+	RemovePRLabels(org, repo string, number int32, labels []string) error
 
 	CreatePRComment(org, repo string, number int32, comment string) error
 	CreateIssueComment(org, repo string, number string, comment string) error
@@ -68,43 +71,39 @@ func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc libconfig.PluginConf
 		return err
 	}
 
-	prHandle := &prNoteHandle{
-		client: bot.cli,
-		org:    prInfo.Org,
-		repo:   prInfo.Repo,
-		number: prInfo.Number,
+	action := giteeclient.GetPullRequestAction(e)
+
+	merr := utils.NewMultiErrors()
+	if err = bot.handleClearLabel(action, prInfo, cfg); err != nil {
+		merr.AddError(err)
 	}
 
-	if giteeclient.GetPullRequestAction(e) == giteeclient.PRActionChangedSourceBranch {
-		return bot.handleClearLabel(prHandle, cfg)
+	commits := uint(e.PullRequest.Commits)
+	if err = bot.handleSquashLabel(action, prInfo, commits, cfg.SquashConfig); err != nil {
+		merr.AddError(err)
 	}
 
-	return nil
+	return merr.Err()
 }
 
 func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
 	ne := giteeclient.NewNoteEventWrapper(e)
 	if !ne.IsCreatingCommentEvent() {
 		log.Debug("Event is not a creation of a comment, skipping.")
-
 		return nil
 	}
 
-	matchLabels := genMachLabels(ne.GetComment())
-	if matchLabels == nil {
-		log.Debug("invalid comment, skipping.")
-
-		return nil
-	}
-
-	return bot.handleLabels(ne, matchLabels, pc, log)
-}
-
-func (bot *robot) getRepoLabelsMap(org, repo string) (map[string]string, error) {
-	repoLabels, err := bot.cli.GetRepoLabels(org, repo)
+	org, repo := ne.GetOrgRep()
+	cfg, err := bot.getConfig(pc, org, repo)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return labelsTransformMap(repoLabels), nil
+	toAdd, toRemove := getMatchedLabels(ne.GetComment())
+	if len(toAdd) == 0 && len(toRemove) == 0 {
+		log.Debug("invalid comment, skipping.")
+		return nil
+	}
+
+	return bot.handleLabels(ne, toAdd, toRemove, cfg)
 }

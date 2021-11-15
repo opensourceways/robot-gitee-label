@@ -1,6 +1,8 @@
 package main
 
 import (
+	"regexp"
+
 	libconfig "github.com/opensourceways/community-robot-lib/config"
 )
 
@@ -58,11 +60,57 @@ type botConfig struct {
 
 	// ClearLabels specifies labels that should be removed when the codes of PR are changed.
 	ClearLabels []string `json:"clear_labels,omitempty"`
+
+	// ClearLabelsByRegexp specifies a expression which can match a list of labels that
+	// should be removed when the codes of PR are changed.
+	ClearLabelsByRegexp string `json:"clear_labels_by_regexp,omitempty"`
+	clearLabelsByRegexp *regexp.Regexp
+
+	// AllowCreatingLabelsByCollaborator is a tag which will lead to create unavailable labels
+	// by collaborator if it is true.
+	AllowCreatingLabelsByCollaborator bool `json:"allow_creating_labels_by_collaborator,omitempty"`
+
+	SquashConfig
 }
 
 func (c *botConfig) setDefault() {
+	c.SquashConfig.setDefault()
 }
 
 func (c *botConfig) validate() error {
+	if c.ClearLabelsByRegexp != "" {
+		v, err := regexp.Compile(c.ClearLabelsByRegexp)
+		if err != nil {
+			return err
+		}
+		c.clearLabelsByRegexp = v
+	}
 	return c.PluginForRepo.Validate()
+}
+
+type SquashConfig struct {
+	// UnableCheckingSquash indicates whether unable checking squash.
+	UnableCheckingSquash bool `json:"unable_checking_squash,omitempty"`
+
+	// CommitsThreshold Check the threshold of the number of PR commits,
+	// and add the label specified by SquashCommitLabel to the PR if this value is exceeded.
+	// zero means no check.
+	CommitsThreshold uint `json:"commits_threshold,omitempty"`
+
+	// SquashCommitLabel Specify the label whose PR exceeds the threshold. default: stat/needs-squash
+	SquashCommitLabel string `json:"squash_commit_label,omitempty"`
+}
+
+func (c *SquashConfig) setDefault() {
+	if c.CommitsThreshold == 0 {
+		c.CommitsThreshold = 1
+	}
+
+	if c.SquashCommitLabel == "" {
+		c.SquashCommitLabel = "stat/needs-squash"
+	}
+}
+
+func (c SquashConfig) unableCheckingSquash() bool {
+	return c.UnableCheckingSquash
 }
