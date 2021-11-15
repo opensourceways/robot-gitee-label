@@ -89,6 +89,9 @@ func (c *botConfig) validate() error {
 }
 
 type SquashConfig struct {
+	// UnableCheckingSquash indicates whether unable checking squash.
+	UnableCheckingSquash bool `json:"unable_checking_squash,omitempty"`
+
 	// CommitsThreshold Check the threshold of the number of PR commits,
 	// and add the label specified by SquashCommitLabel to the PR if this value is exceeded.
 	// zero means no check.
@@ -108,6 +111,6 @@ func (c *SquashConfig) setDefault() {
 	}
 }
 
-func (c SquashConfig) needCheckCommits() bool {
-	return c.CommitsThreshold > 0
+func (c SquashConfig) unableCheckingSquash() bool {
+	return c.UnableCheckingSquash
 }

@@ -3,7 +3,7 @@ package main
 import "github.com/opensourceways/community-robot-lib/giteeclient"
 
 func (bot *robot) handleSquashLabel(action string, prInfo giteeclient.PRInfo, commits uint, cfg SquashConfig) error {
-	if !cfg.needCheckCommits() {
+	if cfg.unableCheckingSquash() {
 		return nil
 	}
 
