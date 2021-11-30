@@ -38,8 +38,11 @@ func (h *repoLabelHelper) getLabelsOfRepo() ([]string, error) {
 
 func (h *repoLabelHelper) createLabelsOfRepo(labels []string) error {
 	mErr := utils.MultiError{}
+	
 	for _, v := range labels {
-		mErr.AddError(h.cli.CreateRepoLabel(h.org, h.repo, v, ""))
+		if err := h.cli.CreateRepoLabel(h.org, h.repo, v, ""); err != nil {
+			mErr.AddError(err)
+		}
 	}
 
 	return mErr.Err()
