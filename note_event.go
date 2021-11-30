@@ -74,7 +74,7 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 }
 
 func addLabels(lh labelHelper, toAdd *labelSet, commenter string, cfg *botConfig) error {
-	canAdd, missing, err := checkLabesToAdd(lh, toAdd, commenter, cfg)
+	canAdd, missing, err := checkLabelsToAdd(lh, toAdd, commenter, cfg)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func addLabels(lh labelHelper, toAdd *labelSet, commenter string, cfg *botConfig
 	return merr.Err()
 }
 
-func checkLabesToAdd(
+func checkLabelsToAdd(
 	h labelHelper,
 	toAdd *labelSet,
 	commenter string,
@@ -137,7 +137,8 @@ func checkLabesToAdd(
 		return nil, nil, err
 	}
 	if b {
-		return append(canAdd, missing...), nil, nil
+		err := h.createLabelsOfRepo(missing)
+		return append(canAdd, missing...), nil, err
 	}
 	return canAdd, missing, nil
 }

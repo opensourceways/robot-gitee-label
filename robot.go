@@ -26,6 +26,7 @@ type iClient interface {
 	AddPRLabel(org, repo string, number int32, label string) error
 	RemovePRLabel(org, repo string, number int32, label string) error
 	RemovePRLabels(org, repo string, number int32, labels []string) error
+	CreateRepoLabel(org, repo, label, color string) error
 
 	CreatePRComment(org, repo string, number int32, comment string) error
 	CreateIssueComment(org, repo string, number string, comment string) error

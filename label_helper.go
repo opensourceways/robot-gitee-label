@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/opensourceways/community-robot-lib/utils"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -9,6 +10,7 @@ import (
 type iRepoLabelHelper interface {
 	getLabelsOfRepo() ([]string, error)
 	isCollaborator(string) (bool, error)
+	createLabelsOfRepo(missing []string) error
 }
 
 type repoLabelHelper struct {
@@ -32,6 +34,14 @@ func (h *repoLabelHelper) getLabelsOfRepo() ([]string, error) {
 		r[i] = item.Name
 	}
 	return r, nil
+}
+
+func (h *repoLabelHelper) createLabelsOfRepo(labels []string) error {
+	mErr := utils.MultiError{}
+	for _, v := range labels {
+		mErr.AddError(h.cli.CreateRepoLabel(h.org, h.repo, v, ""))
+	}
+	return mErr.Err()
 }
 
 type labelHelper interface {
