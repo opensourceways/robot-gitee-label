@@ -106,5 +106,5 @@ func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc libconfig.PluginConfig, l
 		return nil
 	}
 
-	return bot.handleLabels(ne, toAdd, toRemove, cfg)
+	return bot.handleLabels(ne, toAdd, toRemove, cfg, log)
 }
