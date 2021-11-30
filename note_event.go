@@ -6,6 +6,7 @@ import (
 
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	"github.com/opensourceways/community-robot-lib/utils"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -14,6 +15,7 @@ func (bot *robot) handleLabels(
 	toAdd []string,
 	toRemove []string,
 	cfg *botConfig,
+	log *logrus.Entry,
 ) error {
 	lh := genLabelHelper(e, bot.cli)
 	if lh == nil {
@@ -37,7 +39,7 @@ func (bot *robot) handleLabels(
 	}
 
 	if add.count() > 0 {
-		err := addLabels(lh, add, e.GetCommenter(), cfg)
+		err := addLabels(lh, add, e.GetCommenter(), cfg, log)
 		if err != nil {
 			merr.AddError(err)
 		}
@@ -73,8 +75,8 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 	return nil
 }
 
-func addLabels(lh labelHelper, toAdd *labelSet, commenter string, cfg *botConfig) error {
-	canAdd, missing, err := checkLabesToAdd(lh, toAdd, commenter, cfg)
+func addLabels(lh labelHelper, toAdd *labelSet, commenter string, cfg *botConfig, log *logrus.Entry) error {
+	canAdd, missing, err := checkLabelsToAdd(lh, toAdd, commenter, cfg, log)
 	if err != nil {
 		return err
 	}
@@ -104,11 +106,12 @@ func addLabels(lh labelHelper, toAdd *labelSet, commenter string, cfg *botConfig
 	return merr.Err()
 }
 
-func checkLabesToAdd(
+func checkLabelsToAdd(
 	h labelHelper,
 	toAdd *labelSet,
 	commenter string,
 	cfg *botConfig,
+	log *logrus.Entry,
 ) ([]string, []string, error) {
 	v, err := h.getLabelsOfRepo()
 	if err != nil {
@@ -137,6 +140,10 @@ func checkLabesToAdd(
 		return nil, nil, err
 	}
 	if b {
+		if err := h.createLabelsOfRepo(missing); err != nil {
+			log.Error(err)
+		}
+
 		return append(canAdd, missing...), nil, nil
 	}
 	return canAdd, missing, nil
