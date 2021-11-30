@@ -138,6 +138,7 @@ func checkLabelsToAdd(
 	}
 	if b {
 		err := h.createLabelsOfRepo(missing)
+
 		return append(canAdd, missing...), nil, err
 	}
 	return canAdd, missing, nil

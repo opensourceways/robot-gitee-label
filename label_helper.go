@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/opensourceways/community-robot-lib/utils"
 	"strings"
 
+	"github.com/opensourceways/community-robot-lib/utils"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -41,6 +41,7 @@ func (h *repoLabelHelper) createLabelsOfRepo(labels []string) error {
 	for _, v := range labels {
 		mErr.AddError(h.cli.CreateRepoLabel(h.org, h.repo, v, ""))
 	}
+
 	return mErr.Err()
 }
 
