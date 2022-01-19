@@ -9,8 +9,7 @@ import (
 )
 
 func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, cfg *botConfig) error {
-	action := sdk.GetPullRequestAction(e)
-	if action != sdk.PRActionChangedSourceBranch {
+	if sdk.GetPullRequestAction(e) != sdk.PRActionChangedSourceBranch {
 		return nil
 	}
 

@@ -97,7 +97,7 @@ func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc config.Config, log *logru
 		return err
 	}
 
-	toAdd, toRemove := getMatchedLabels(e.GetCommenter())
+	toAdd, toRemove := getMatchedLabels(e.GetComment().GetBody())
 	if len(toAdd) == 0 && len(toRemove) == 0 {
 		log.Debug("invalid comment, skipping.")
 		return nil
