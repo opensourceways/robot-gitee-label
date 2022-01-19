@@ -8,16 +8,15 @@ func (bot *robot) handleSquashLabel(e *sdk.PullRequestEvent, commits uint, cfg S
 	}
 
 	action := sdk.GetPullRequestAction(e)
-	org, repo := e.GetOrgRepo()
-	number := e.GetPRNumber()
-	labels := e.GetPRLabelSet()
-
 	if action != sdk.PRActionOpened && action != sdk.PRActionChangedSourceBranch {
 		return nil
 	}
 
-	exceeded := commits > cfg.CommitsThreshold
+	labels := e.GetPRLabelSet()
 	hasSquashLabel := labels.Has(cfg.SquashCommitLabel)
+	exceeded := commits > cfg.CommitsThreshold
+	org, repo := e.GetOrgRepo()
+	number := e.GetPRNumber()
 
 	if exceeded && !hasSquashLabel {
 		return bot.cli.AddPRLabel(org, repo, number, cfg.SquashCommitLabel)

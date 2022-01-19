@@ -10,21 +10,20 @@ import (
 
 func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, cfg *botConfig) error {
 	action := sdk.GetPullRequestAction(e)
-	org, repo := e.GetOrgRepo()
-	number := e.GetPRNumber()
-	labels := e.GetPRLabelSet()
-
 	if action != sdk.PRActionChangedSourceBranch {
 		return nil
 	}
 
+	labels := e.GetPRLabelSet()
 	toRemove := getClearLabels(labels, cfg)
 	if len(toRemove) == 0 {
 		return nil
 	}
 
-	err := bot.cli.RemovePRLabels(org, repo, number, toRemove)
-	if err != nil {
+	org, repo := e.GetOrgRepo()
+	number := e.GetPRNumber()
+
+	if err := bot.cli.RemovePRLabels(org, repo, number, toRemove); err != nil {
 		return err
 	}
 
