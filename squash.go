@@ -1,19 +1,23 @@
 package main
 
-import "github.com/opensourceways/community-robot-lib/giteeclient"
+import sdk "github.com/opensourceways/go-gitee/gitee"
 
-func (bot *robot) handleSquashLabel(action string, prInfo giteeclient.PRInfo, commits uint, cfg SquashConfig) error {
+func (bot *robot) handleSquashLabel(e *sdk.PullRequestEvent, commits uint, cfg SquashConfig) error {
 	if cfg.unableCheckingSquash() {
 		return nil
 	}
 
-	if action != giteeclient.PRActionOpened && action != giteeclient.PRActionChangedSourceBranch {
+	action := sdk.GetPullRequestAction(e)
+	org, repo := e.GetOrgRepo()
+	number := e.GetPRNumber()
+	labels := e.GetPRLabelSet()
+
+	if action != sdk.PRActionOpened && action != sdk.PRActionChangedSourceBranch {
 		return nil
 	}
 
 	exceeded := commits > cfg.CommitsThreshold
-	hasSquashLabel := prInfo.HasLabel(cfg.SquashCommitLabel)
-	org, repo, number := prInfo.Org, prInfo.Repo, prInfo.Number
+	hasSquashLabel := labels.Has(cfg.SquashCommitLabel)
 
 	if exceeded && !hasSquashLabel {
 		return bot.cli.AddPRLabel(org, repo, number, cfg.SquashCommitLabel)

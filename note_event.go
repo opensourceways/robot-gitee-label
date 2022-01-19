@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opensourceways/community-robot-lib/giteeclient"
 	"github.com/opensourceways/community-robot-lib/utils"
+	sdk "github.com/opensourceways/go-gitee/gitee"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func (bot *robot) handleLabels(
-	e giteeclient.NoteEventWrapper,
+	e *sdk.NoteEvent,
 	toAdd []string,
 	toRemove []string,
 	cfg *botConfig,
@@ -47,8 +47,8 @@ func (bot *robot) handleLabels(
 	return merr.Err()
 }
 
-func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
-	org, repo := e.GetOrgRep()
+func genLabelHelper(e *sdk.NoteEvent, cli iClient) labelHelper {
+	org, repo := e.GetOrgRepo()
 	rlh := &repoLabelHelper{
 		cli:  cli,
 		org:  org,
@@ -56,19 +56,17 @@ func genLabelHelper(e giteeclient.NoteEventWrapper, cli iClient) labelHelper {
 	}
 
 	if e.IsPullRequest() {
-		ne := giteeclient.NewPRNoteEvent(e.NoteEvent)
 		return &prLabelHelper{
-			number:          ne.GetPRNumber(),
-			labels:          ne.GetPRLabels(),
+			number:          e.GetPRNumber(),
+			labels:          e.GetPRLabelSet(),
 			repoLabelHelper: rlh,
 		}
 	}
 
 	if e.IsIssue() {
-		ne := giteeclient.NewIssueNoteEvent(e.NoteEvent)
 		return &issueLabelHelper{
-			number:          ne.GetIssueNumber(),
-			labels:          ne.GetIssueLabels(),
+			number:          e.GetIssueNumber(),
+			labels:          e.GetIssueLabelSet(),
 			repoLabelHelper: rlh,
 		}
 	}
