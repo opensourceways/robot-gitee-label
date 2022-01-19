@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/opensourceways/community-robot-lib/config"
-	"github.com/opensourceways/community-robot-lib/robot-gitee-framework"
+	framework "github.com/opensourceways/community-robot-lib/robot-gitee-framework"
 	"github.com/opensourceways/community-robot-lib/utils"
 	sdk "github.com/opensourceways/go-gitee/gitee"
 	"github.com/sirupsen/logrus"

@@ -85,6 +85,7 @@ func (c *botConfig) validate() error {
 		}
 		c.clearLabelsByRegexp = v
 	}
+
 	return c.RepoFilter.Validate()
 }
 
