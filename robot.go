@@ -3,11 +3,10 @@ package main
 import (
 	"fmt"
 
-	sdk "gitee.com/openeuler/go-gitee/gitee"
-	libconfig "github.com/opensourceways/community-robot-lib/config"
-	"github.com/opensourceways/community-robot-lib/giteeclient"
-	libplugin "github.com/opensourceways/community-robot-lib/giteeplugin"
+	"github.com/opensourceways/community-robot-lib/config"
+	framework "github.com/opensourceways/community-robot-lib/robot-gitee-framework"
 	"github.com/opensourceways/community-robot-lib/utils"
+	sdk "github.com/opensourceways/go-gitee/gitee"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,11 +41,11 @@ type robot struct {
 	cli iClient
 }
 
-func (bot *robot) NewPluginConfig() libconfig.PluginConfig {
+func (bot *robot) NewConfig() config.Config {
 	return &configuration{}
 }
 
-func (bot *robot) getConfig(cfg libconfig.PluginConfig, org, repo string) (*botConfig, error) {
+func (bot *robot) getConfig(cfg config.Config, org, repo string) (*botConfig, error) {
 	c, ok := cfg.(*configuration)
 	if !ok {
 		return nil, fmt.Errorf("can't convert to configuration")
@@ -59,52 +58,50 @@ func (bot *robot) getConfig(cfg libconfig.PluginConfig, org, repo string) (*botC
 	return nil, fmt.Errorf("no config for this repo:%s/%s", org, repo)
 }
 
-func (bot *robot) RegisterEventHandler(p libplugin.HandlerRegitster) {
+func (bot *robot) RegisterEventHandler(p framework.HandlerRegitster) {
 	p.RegisterPullRequestHandler(bot.handlePREvent)
 	p.RegisterNoteEventHandler(bot.handleNoteEvent)
 }
 
-func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
-	prInfo := giteeclient.GetPRInfoByPREvent(e)
+func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, pc config.Config, log *logrus.Entry) error {
+	org, repo := e.GetOrgRepo()
 
-	cfg, err := bot.getConfig(pc, prInfo.Org, prInfo.Repo)
+	cfg, err := bot.getConfig(pc, org, repo)
 	if err != nil {
 		return err
 	}
 
-	action := giteeclient.GetPullRequestAction(e)
-
 	merr := utils.NewMultiErrors()
-	if err = bot.handleClearLabel(action, prInfo, cfg); err != nil {
+	if err = bot.handleClearLabel(e, cfg); err != nil {
 		merr.AddError(err)
 	}
 
-	commits := uint(e.PullRequest.Commits)
-	if err = bot.handleSquashLabel(action, prInfo, commits, cfg.SquashConfig); err != nil {
+	commits := uint(e.GetPullRequest().GetCommits())
+
+	if err = bot.handleSquashLabel(e, commits, cfg.SquashConfig); err != nil {
 		merr.AddError(err)
 	}
 
 	return merr.Err()
 }
 
-func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc libconfig.PluginConfig, log *logrus.Entry) error {
-	ne := giteeclient.NewNoteEventWrapper(e)
-	if !ne.IsCreatingCommentEvent() {
+func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, pc config.Config, log *logrus.Entry) error {
+	if !e.IsCreatingCommentEvent() {
 		log.Debug("Event is not a creation of a comment, skipping.")
 		return nil
 	}
 
-	org, repo := ne.GetOrgRep()
+	org, repo := e.GetOrgRepo()
 	cfg, err := bot.getConfig(pc, org, repo)
 	if err != nil {
 		return err
 	}
 
-	toAdd, toRemove := getMatchedLabels(ne.GetComment())
+	toAdd, toRemove := getMatchedLabels(e.GetComment().GetBody())
 	if len(toAdd) == 0 && len(toRemove) == 0 {
 		log.Debug("invalid comment, skipping.")
 		return nil
 	}
 
-	return bot.handleLabels(ne, toAdd, toRemove, cfg, log)
+	return bot.handleLabels(e, toAdd, toRemove, cfg, log)
 }

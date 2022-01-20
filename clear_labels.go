@@ -4,22 +4,25 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opensourceways/community-robot-lib/giteeclient"
+	sdk "github.com/opensourceways/go-gitee/gitee"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func (bot *robot) handleClearLabel(action string, prInfo giteeclient.PRInfo, cfg *botConfig) error {
-	if action != giteeclient.PRActionChangedSourceBranch {
+func (bot *robot) handleClearLabel(e *sdk.PullRequestEvent, cfg *botConfig) error {
+	if sdk.GetPullRequestAction(e) != sdk.PRActionChangedSourceBranch {
 		return nil
 	}
 
-	toRemove := getClearLabels(prInfo.Labels, cfg)
+	labels := e.GetPRLabelSet()
+	toRemove := getClearLabels(labels, cfg)
 	if len(toRemove) == 0 {
 		return nil
 	}
 
-	err := bot.cli.RemovePRLabels(prInfo.Org, prInfo.Repo, prInfo.Number, toRemove)
-	if err != nil {
+	org, repo := e.GetOrgRepo()
+	number := e.GetPRNumber()
+
+	if err := bot.cli.RemovePRLabels(org, repo, number, toRemove); err != nil {
 		return err
 	}
 
@@ -28,7 +31,7 @@ func (bot *robot) handleClearLabel(action string, prInfo giteeclient.PRInfo, cfg
 		strings.Join(toRemove, ", "),
 	)
 
-	return bot.cli.CreatePRComment(prInfo.Org, prInfo.Repo, prInfo.Number, comment)
+	return bot.cli.CreatePRComment(org, repo, number, comment)
 }
 
 func getClearLabels(labels sets.String, cfg *botConfig) []string {
