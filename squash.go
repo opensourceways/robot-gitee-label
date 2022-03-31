@@ -8,7 +8,7 @@ func (bot *robot) handleSquashLabel(e *sdk.PullRequestEvent, commits uint, cfg S
 	}
 
 	action := sdk.GetPullRequestAction(e)
-	if action != sdk.PRActionOpened && action != sdk.PRActionChangedSourceBranch {
+	if action != sdk.ActionOpen && action != sdk.PRActionChangedSourceBranch {
 		return nil
 	}
 
